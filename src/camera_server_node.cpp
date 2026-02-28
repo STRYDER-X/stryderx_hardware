@@ -20,10 +20,21 @@ CameraServerNode::~CameraServerNode() {
 void CameraServerNode::InitializeServer() {
   RCLCPP_INFO(this->get_logger(), "%s()::Setting up camera server.", __func__);
   luminosityPub_ =
-      this->create_publisher<std_msgs::msg::Float32>("/luminosity_value", 10);
+      this->create_publisher<std_msgs::msg::Float32>("~/luminosity_value", 10);
   imageCompressedPub_ =
       this->create_publisher<sensor_msgs::msg::CompressedImage>(
-          "/camera/image/compressed", 3);
+          "~/camera/image/compressed", 3);
+
+  stopCameraService_ = this->create_service<std_srvs::srv::Trigger>(
+      "~/stop",
+      [this](const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+             std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+        this->Stop();
+        response->success = true;
+        response->message = "Camera server stopped.";
+
+        RCLCPP_INFO(this->get_logger(), "Camera server stopped.");
+      });
 
   timer_ = this->create_wall_timer(33ms, [this]() { this->Start(); });
 }
@@ -43,9 +54,10 @@ void CameraServerNode::Start() {
 }
 
 void CameraServerNode::Stop() {
-  RCLCPP_INFO(this->get_logger(), "%s()::Stopping server.", __func__);
+  if (rclcpp::ok()) {
+    RCLCPP_INFO(this->get_logger(), "%s()::Stopping server.", __func__);
+  }
   if (timer_ && !timer_->is_canceled()) {
-    RCLCPP_INFO(this->get_logger(), "%s()::Timer canceled.", __func__);
     timer_->cancel();
   }
 }
