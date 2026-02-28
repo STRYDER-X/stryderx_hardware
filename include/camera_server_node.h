@@ -1,14 +1,14 @@
 #pragma once
 #include "camera.h"
 #include "camera_utils.h"
+#include <chrono>
 #include <cv_bridge/cv_bridge.h>
+#include <memory>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <std_msgs/msg/float32.hpp>
 
-constexpr int CAMERA_FPS_MS = 33;
 constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server_node";
-
 class CameraServerNode : public rclcpp::Node, protected camera_driver::Camera {
 public:
   CameraServerNode();

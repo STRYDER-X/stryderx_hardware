@@ -1,5 +1,8 @@
 #include "camera_server_node.h"
 
+// NOTE : Keep here to prevent namespace pollution
+using namespace std::chrono_literals;
+
 CameraServerNode::CameraServerNode() : Node(CAMERA_SERVER_NODE_NAME), Camera() {
   InitializeServer();
 }
@@ -22,27 +25,29 @@ void CameraServerNode::InitializeServer() {
       this->create_publisher<sensor_msgs::msg::CompressedImage>(
           "/camera/image/compressed", 3);
 
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(CAMERA_FPS_MS),
-                                   std::bind(&CameraServerNode::Start, this));
+  timer_ = this->create_wall_timer(33ms, [this]() { this->Start(); });
 }
 
 void CameraServerNode::Start() {
-  RCLCPP_INFO_ONCE(this->get_logger(), "%s()::Sever started.", __func__);
-
   auto frame = CaptureFrame();
-  if (frame.has_value()) {
-    PublishImage(frame.value());
-    PublishLuminosity(frame.value());
-  } else {
+  if (!frame.has_value()) {
     RCLCPP_ERROR(this->get_logger(), "%s()::Failed to capture frame.",
                  __func__);
     Stop();
+    return;
   }
+
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s()::Sever started.", __func__);
+  PublishImage(frame.value());
+  PublishLuminosity(frame.value());
 }
 
 void CameraServerNode::Stop() {
   RCLCPP_INFO(this->get_logger(), "%s()::Stopping server.", __func__);
-  rclcpp::shutdown();
+  if (timer_ && !timer_->is_canceled()) {
+    RCLCPP_INFO(this->get_logger(), "%s()::Timer canceled.", __func__);
+    timer_->cancel();
+  }
 }
 
 void CameraServerNode::PublishImage(const cv::Mat &frame) {
@@ -61,10 +66,9 @@ void CameraServerNode::PublishImage(const cv::Mat &frame) {
 }
 
 void CameraServerNode::PublishLuminosity(const cv::Mat &frame) {
-  // TODO: Remove once newer version of camera driver pkg is implemented.
-  // NOTE: GetLuminosity only accepts non-const variables
-  cv::Mat non_const_frame = frame.clone();
-
+  // NOTE: Create shallow copy of frame to satisfies the non-const 'cv::Mat &'
+  // signature of GetLuminosity without duplicating the heavy pixel data.
+  cv::Mat non_const_frame = frame;
   auto luminosity = camera_utils::GetLuminosity(non_const_frame);
   if (luminosity) {
     auto luminosityMsg = std_msgs::msg::Float32();
