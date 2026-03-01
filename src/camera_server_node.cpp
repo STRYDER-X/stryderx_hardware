@@ -38,21 +38,43 @@ void CameraServerNode::InitializeServer() {
       this->create_publisher<sensor_msgs::msg::CompressedImage>(
           "~/camera/image/compressed", 3);
 
+  startStreamingSrv_ = this->create_service<std_srvs::srv::Trigger>(
+      "~/start_streaming",
+      [this](const std::shared_ptr<rmw_request_id_t> header,
+             const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+             std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+        this->HandleStartRequest(header, request, response);
+      });
+
+  pauseStreamingSrv_ = this->create_service<std_srvs::srv::Trigger>(
+      "~/pause_streaming",
+      [this](const std::shared_ptr<rmw_request_id_t> header,
+             const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+             std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+        this->HandlePauseRequest(header, request, response);
+      });
+
   shutdownCameraSrv_ = this->create_service<std_srvs::srv::Trigger>(
-      "~/shutdown",
+      "~/shutdown_server",
       [this](const std::shared_ptr<rmw_request_id_t> header,
              const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
              std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
         this->HandleShutdownRequest(header, request, response);
       });
 
-  timer_ = this->create_wall_timer(33ms, [this]() { this->StartServer(); });
+  RCLCPP_INFO(this->get_logger(), "%s()::Sever started.", __func__);
+
+  timer_ = this->create_wall_timer(33ms, [this]() { this->StartStreaming(); });
 }
 
-void CameraServerNode::StartServer() {
+void CameraServerNode::StartStreaming() {
+  if (streamPaused_) {
+    return;
+  }
+
   auto frame = CaptureFrame();
 
-  if (!frame.has_value()) {
+  while (!frame.has_value()) {
     missedFrameCount_++;
 
     if (missedFrameCount_ > 10) {
@@ -62,29 +84,26 @@ void CameraServerNode::StartServer() {
       this->ShutdownServer();
       return;
     }
-    RCLCPP_ERROR(this->get_logger(), "%s()::Failed to capture frame.",
-                 __func__);
+    frame = CaptureFrame();
   }
 
   missedFrameCount_ = 0;
 
-  RCLCPP_INFO_ONCE(this->get_logger(), "%s()::Sever started.", __func__);
   PublishImage(frame.value());
   PublishLuminosity(frame.value());
+
+  RCLCPP_INFO_ONCE(this->get_logger(), "%s()::Feeds live for [%s].", __func__,
+                   cameraName_.c_str());
 }
 
-void CameraServerNode::HaltStreaming() {
+void CameraServerNode::ShutdownServer() {
   if (rclcpp::ok()) {
-    RCLCPP_INFO(this->get_logger(), "%s()::Stop streaming feeds for [%s].",
+    RCLCPP_INFO(this->get_logger(), "%s()::Stopped live feeds for [%s].",
                 __func__, cameraName_.c_str());
   }
   if (timer_ && !timer_->is_canceled()) {
     timer_->cancel();
   }
-}
-
-void CameraServerNode::ShutdownServer() {
-  this->HaltStreaming();
   rclcpp::shutdown();
 }
 
@@ -120,6 +139,32 @@ void CameraServerNode::PublishImage(const cv::Mat &frame) {
   imageCompressedPub_->publish(*compressed_image);
 }
 
+void CameraServerNode::HandleStartRequest(
+    const std::shared_ptr<rmw_request_id_t> /*header*/,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+  streamPaused_ = false;
+  response->success = true;
+  response->message = "Resuming live feeds for [" + cameraName_ + "].";
+
+  RCLCPP_INFO(this->get_logger(), "%s()::%s", __func__,
+              response->message.c_str());
+
+  this->StartStreaming();
+}
+
+void CameraServerNode::HandlePauseRequest(
+    const std::shared_ptr<rmw_request_id_t> /*header*/,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+  streamPaused_ = true;
+  response->success = true;
+  response->message = "Pausing live feeds for [" + cameraName_ + "].";
+
+  RCLCPP_INFO(this->get_logger(), "%s()::%s", __func__,
+              response->message.c_str());
+}
+
 void CameraServerNode::HandleShutdownRequest(
     const std::shared_ptr<rmw_request_id_t> /*header*/,
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
@@ -132,6 +177,7 @@ void CameraServerNode::HandleShutdownRequest(
 
   this->ShutdownServer();
 }
+
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<CameraServerNode>("RPi4", "USB", 0, 30);
