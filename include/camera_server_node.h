@@ -8,7 +8,7 @@
 #include <std_msgs/msg/float32.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
-// namespace stryderx {
+namespace stryderx {
 
 constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server_node";
 class CameraServerNode : public rclcpp::Node, protected camera_driver::Camera {
@@ -56,5 +56,4 @@ private:
       const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 };
-
-// } // namespace stryderx
+} // namespace stryderx

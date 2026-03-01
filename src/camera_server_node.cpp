@@ -2,6 +2,7 @@
 
 // NOTE : Keep here to prevent namespace pollution
 using namespace std::chrono_literals;
+namespace stryderx {
 
 CameraServerNode::CameraServerNode() : Node(CAMERA_SERVER_NODE_NAME), Camera() {
   InitializeServer();
@@ -193,10 +194,12 @@ void CameraServerNode::HandleShutdownRequest(
 
   this->ShutdownServer();
 }
+} // namespace stryderx
 
 int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<CameraServerNode>("RPi4", "USB", 0, 30);
+  auto node =
+      std::make_shared<stryderx::CameraServerNode>("RPi4", "USB", 0, 30);
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
