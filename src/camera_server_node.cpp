@@ -30,7 +30,8 @@ void CameraServerNode::InitializeServer() {
     return;
   }
 
-  cameraName_ = cameraSpecs_ ? cameraSpecs_->name : "Unkown";
+  cameraName_ = cameraSpecs_->name;
+  maxMissedFrameCount_ = timeoutSeconds * cameraSpecs_->fps;
 
   luminosityPub_ =
       this->create_publisher<std_msgs::msg::Float32>("~/luminosity_value", 10);
@@ -74,17 +75,16 @@ void CameraServerNode::StartStreaming() {
 
   auto frame = CaptureFrame();
 
-  while (!frame.has_value()) {
+  if (!frame.has_value()) {
     missedFrameCount_++;
 
-    if (missedFrameCount_ > 10) {
+    if (missedFrameCount_ > maxMissedFrameCount_) {
       RCLCPP_FATAL(this->get_logger(),
                    "%s()::Consecutive frame failures. Shutting down server.",
                    __func__);
       this->ShutdownServer();
-      return;
     }
-    frame = CaptureFrame();
+    return;
   }
 
   missedFrameCount_ = 0;
@@ -143,23 +143,39 @@ void CameraServerNode::HandleStartRequest(
     const std::shared_ptr<rmw_request_id_t> /*header*/,
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  streamPaused_ = false;
+
+  std::string message;
+
+  if (streamPaused_) {
+    streamPaused_ = false;
+    message = "Resuming live feeds for [" + cameraName_ + "].";
+  } else {
+    message = "Feeds already live for [" + cameraName_ + "].";
+  }
+
   response->success = true;
-  response->message = "Resuming live feeds for [" + cameraName_ + "].";
+  response->message = message;
 
   RCLCPP_INFO(this->get_logger(), "%s()::%s", __func__,
               response->message.c_str());
-
-  this->StartStreaming();
 }
 
 void CameraServerNode::HandlePauseRequest(
     const std::shared_ptr<rmw_request_id_t> /*header*/,
     const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
-  streamPaused_ = true;
+
+  std::string message;
+
+  if (!streamPaused_) {
+    streamPaused_ = true;
+    message = "Pausing live feeds for [" + cameraName_ + "].";
+  } else {
+    message = "Feeds already paused for [" + cameraName_ + "].";
+  }
+
   response->success = true;
-  response->message = "Pausing live feeds for [" + cameraName_ + "].";
+  response->message = message;
 
   RCLCPP_INFO(this->get_logger(), "%s()::%s", __func__,
               response->message.c_str());

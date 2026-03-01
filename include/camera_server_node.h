@@ -30,9 +30,11 @@ private:
 
   std::optional<camera_utils::CameraInfo> cameraSpecs_;
   std::string cameraName_;
-  int missedFrameCount_ = 0;
 
+  int maxMissedFrameCount_;
+  int missedFrameCount_ = 0;
   bool streamPaused_ = false;
+  int timeoutSeconds = 5;
 
   void InitializeServer();
   void StartStreaming();
