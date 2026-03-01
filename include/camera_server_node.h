@@ -19,12 +19,22 @@ private:
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr luminosityPub_;
   rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr
       imageCompressedPub_;
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stopCameraService_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr shutdownCameraSrv_;
   rclcpp::TimerBase::SharedPtr timer_;
 
+  std::optional<camera_utils::CameraInfo> cameraSpecs_;
+  std::string cameraName_;
+  int missedFrameCount_ = 0;
+
   void InitializeServer();
-  void Start();
-  void Stop();
+  void StartServer();
+  void HaltStreaming();
+  void ShutdownServer();
+
   void PublishLuminosity(const cv::Mat &frame);
   void PublishImage(const cv::Mat &frame);
+  void HandleShutdownRequest(
+      const std::shared_ptr<rmw_request_id_t> header,
+      const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+      std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 };
