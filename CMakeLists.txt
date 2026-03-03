@@ -25,7 +25,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# Define module path for custom configuration files 
+# Define module path for custom configuration files
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 include(Executables)
 
