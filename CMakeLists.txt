@@ -17,9 +17,12 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
+option(BUILD_DOC "Build documentation" ON)
+
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 include(Executables)
 include(Linting)
+include(Doxygen)
 
 add_subdirectory(third_party)
 add_subdirectory(src)
