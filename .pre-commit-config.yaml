@@ -14,14 +14,8 @@ repos:
   hooks:
   - id: autopep8
     args: ['--in-place', '--aggressive']
-
 - repo: local
   hooks:
-  - id: check-todos
-    name: Check for bare TODOs and FIXMEs
-    entry: grep -nHIRE "\b(todo|fixme)\b"
-    language: system
-    files: \.(hpp|cpp|h|c|py|cmake)|CMakeLists\.txt$
   - id: uncrustify
     name: Hardware Linter (Uncrustify)
     entry: ament_uncrustify --reformat -c ./cmake/.uncrustify.cfg

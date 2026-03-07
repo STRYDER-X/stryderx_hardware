@@ -21,7 +21,7 @@ namespace stryderx
 {
 
 CameraServerNode::CameraServerNode()
-: Node(CAMERA_SERVER_NODE_NAME), Camera()
+  : Node(CAMERA_SERVER_NODE_NAME), Camera()
 {
   InitializeServer();
 }
@@ -29,7 +29,7 @@ CameraServerNode::CameraServerNode()
 CameraServerNode::CameraServerNode(
   std::string name, std::string type,
   int index, int fps)
-: Node(CAMERA_SERVER_NODE_NAME), Camera(name, type, index, fps)
+  : Node(CAMERA_SERVER_NODE_NAME), Camera(name, type, index, fps)
 {
   InitializeServer();
 }
@@ -44,7 +44,8 @@ void CameraServerNode::InitializeServer()
   RCLCPP_INFO(this->get_logger(), "%s()::Setting up camera server.", __func__);
 
   cameraSpecs_ = this->GetCameraSpecs();
-  if (!cameraSpecs_.has_value()) {
+  if (!cameraSpecs_.has_value())
+  {
     RCLCPP_FATAL(
       this->get_logger(),
       "%s:: Could not initialize camera hardware. Shutting down server.",
@@ -60,49 +61,54 @@ void CameraServerNode::InitializeServer()
     this->create_publisher<std_msgs::msg::Float32>("~/luminosity_value", 10);
   imageCompressedPub_ =
     this->create_publisher<sensor_msgs::msg::CompressedImage>(
-    "~/camera/image/compressed", 3);
+      "~/camera/image/compressed", 3);
 
   startStreamingSrv_ = this->create_service<std_srvs::srv::Trigger>(
     "~/start_streaming",
     [this](const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+           const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+           std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
       this->HandleStartRequest(header, request, response);
     });
 
   pauseStreamingSrv_ = this->create_service<std_srvs::srv::Trigger>(
     "~/pause_streaming",
     [this](const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+           const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+           std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
       this->HandlePauseRequest(header, request, response);
     });
 
   shutdownCameraSrv_ = this->create_service<std_srvs::srv::Trigger>(
     "~/shutdown_server",
     [this](const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
+           const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+           std::shared_ptr<std_srvs::srv::Trigger::Response> response) {
       this->HandleShutdownRequest(header, request, response);
     });
 
   RCLCPP_INFO(this->get_logger(), "%s()::Sever started.", __func__);
 
-  timer_ = this->create_wall_timer(33ms, [this]() {this->StartStreaming();});
+  timer_ = this->create_wall_timer(33ms, [this]() {
+      this->StartStreaming();
+    });
 }
 
 void CameraServerNode::StartStreaming()
 {
-  if (streamPaused_) {
+  if (streamPaused_)
+  {
     return;
   }
 
   auto frame = CaptureFrame();
 
-  if (!frame.has_value()) {
+  if (!frame.has_value())
+  {
     missedFrameCount_++;
 
-    if (missedFrameCount_ > maxMissedFrameCount_) {
+    if (missedFrameCount_ > maxMissedFrameCount_)
+    {
       RCLCPP_FATAL(
         this->get_logger(),
         "%s()::Consecutive frame failures. Shutting down server.",
@@ -124,12 +130,14 @@ void CameraServerNode::StartStreaming()
 
 void CameraServerNode::ShutdownServer()
 {
-  if (rclcpp::ok()) {
+  if (rclcpp::ok())
+  {
     RCLCPP_INFO(
       this->get_logger(), "%s()::Stopped live feeds for [%s].",
       __func__, cameraName_.c_str());
   }
-  if (timer_ && !timer_->is_canceled()) {
+  if (timer_ && !timer_->is_canceled())
+  {
     timer_->cancel();
   }
   rclcpp::shutdown();
@@ -141,14 +149,17 @@ void CameraServerNode::PublishLuminosity(const cv::Mat & frame)
      signature of GetLuminosity without duplicating the heavy pixel data. */
   cv::Mat non_const_frame = frame;
   auto luminosity = camera_utils::GetLuminosity(non_const_frame);
-  if (luminosity) {
+  if (luminosity)
+  {
     auto luminosityMsg = std_msgs::msg::Float32();
     luminosityMsg.data = luminosity.value();
     luminosityPub_->publish(luminosityMsg);
     RCLCPP_DEBUG(
       this->get_logger(), "%s()::Luminosity value - [%.2f]",
       __func__, luminosityMsg.data);
-  } else {
+  }
+  else
+  {
     RCLCPP_WARN(
       this->get_logger(),
       "%s()::Failed to get luminosity from the frame.", __func__);
@@ -178,10 +189,13 @@ void CameraServerNode::HandleStartRequest(
 {
   std::string message;
 
-  if (streamPaused_) {
+  if (streamPaused_)
+  {
     streamPaused_ = false;
     message = "Resuming live feeds for [" + cameraName_ + "].";
-  } else {
+  }
+  else
+  {
     message = "Feeds already live for [" + cameraName_ + "].";
   }
 
@@ -200,10 +214,13 @@ void CameraServerNode::HandlePauseRequest(
 {
   std::string message;
 
-  if (!streamPaused_) {
+  if (!streamPaused_)
+  {
     streamPaused_ = true;
     message = "Pausing live feeds for [" + cameraName_ + "].";
-  } else {
+  }
+  else
+  {
     message = "Feeds already paused for [" + cameraName_ + "].";
   }
 
