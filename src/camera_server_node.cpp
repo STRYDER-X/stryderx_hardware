@@ -248,6 +248,14 @@ void CameraServerNode::HandleShutdownRequest(
 }
 } // namespace stryderx
 
+/**
+ * @brief Entry point for the Camera Server Node.
+ * * Initializes the ROS 2 communications, instantiates the CameraServerNode
+ * with default RPi4 USB settings, and begins the execution loop.
+ * * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments.
+ * @return int Execution status (0 for success).
+ */
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
