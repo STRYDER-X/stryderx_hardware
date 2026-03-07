@@ -1,8 +1,15 @@
+.DEFAULT_GOAL := help
 PROJECT_NAME := stryderx_hardware
 LINT_EXCLUDES := third_party
 CONFIG_FILE := .uncrustify.cfg
 
 .PHONY: lint
+
+help: ## Show this help message
+	@grep -E '^(help):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@grep -E '^(lint|docs):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
 
 # TODO: Should update this to trigger any linting in third_party subdirectories if applicable.
 lint: ## Internal linting using the local config file
