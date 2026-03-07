@@ -21,7 +21,7 @@ option(BUILD_DOC "Build documentation" ON)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 include(Executables)
-include(Linting)
+include(Linter)
 include(Doxygen)
 
 add_subdirectory(third_party)
