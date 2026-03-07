@@ -34,7 +34,7 @@ namespace stryderx
 /**
  * @brief Defines the name of the camera server node.
  */
-constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server_node";
+  constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server_node";
 
 /**
  * @class CameraServerNode
@@ -43,131 +43,131 @@ constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server_node";
  * * This class inherits from rclcpp::Node for ROS communication and
  * camera_driver::Camera for low-level hardware access.
  */
-class CameraServerNode : public rclcpp::Node, protected camera_driver::Camera
-{
+  class CameraServerNode: public rclcpp::Node, protected camera_driver::Camera
+  {
 public:
-  /**
-   * @brief Construct a new CameraServerNode object with default settings.
-   */
-  CameraServerNode();
+    /**
+     * @brief Construct a new CameraServerNode object with default settings.
+     */
+    CameraServerNode();
 
-  /**
-   * @brief Construct a new CameraServerNode object with specific hardware
-   * parameters.
-   *
-   * @param name The name of the camera.
-   * @param type The type of the camera (e.g., "USB", "CSI").
-   * @param index The device index (e.g., 0 for /dev/video0).
-   * @param fps The target frames per second.
-   */
-  CameraServerNode(std::string name, std::string type, int index, int fps);
+    /**
+     * @brief Construct a new CameraServerNode object with specific hardware
+     * parameters.
+     *
+     * @param name The name of the camera.
+     * @param type The type of the camera (e.g., "USB", "CSI").
+     * @param index The device index (e.g., 0 for /dev/video0).
+     * @param fps The target frames per second.
+     */
+    CameraServerNode(std::string name, std::string type, int index, int fps);
 
-  /**
-   * @brief Destroy the CameraServerNode object and ensures hardware is
-   * released.
-   */
-  virtual ~CameraServerNode();
+    /**
+     * @brief Destroy the CameraServerNode object and ensures hardware is
+     * released.
+     */
+    virtual ~CameraServerNode();
 
 private:
-  /** @brief Publisher for luminosity data extracted from camera frames. */
-  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr luminosityPub_;
+    /** @brief Publisher for luminosity data extracted from camera frames. */
+    rclcpp::Publisher < std_msgs::msg::Float32 > ::SharedPtr luminosityPub_;
 
-  /** @brief Publisher for JPEG compressed images from the camera feed. */
-  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr
+    /** @brief Publisher for JPEG compressed images from the camera feed. */
+    rclcpp::Publisher < sensor_msgs::msg::CompressedImage > ::SharedPtr
     imageCompressedPub_;
 
-  /** @brief Service to resume/start the camera stream. */
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr startStreamingSrv_;
+    /** @brief Service to resume/start the camera stream. */
+    rclcpp::Service < std_srvs::srv::Trigger > ::SharedPtr startStreamingSrv_;
 
-  /** @brief Service to pause the camera stream. */
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr pauseStreamingSrv_;
+    /** @brief Service to pause the camera stream. */
+    rclcpp::Service < std_srvs::srv::Trigger > ::SharedPtr pauseStreamingSrv_;
 
-  /** @brief Service to shut down the node and camera hardware. */
-  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr shutdownCameraSrv_;
+    /** @brief Service to shut down the node and camera hardware. */
+    rclcpp::Service < std_srvs::srv::Trigger > ::SharedPtr shutdownCameraSrv_;
 
-  /** @brief Main processing timer to poll the camera and publish data. */
-  rclcpp::TimerBase::SharedPtr timer_;
+    /** @brief Main processing timer to poll the camera and publish data. */
+    rclcpp::TimerBase::SharedPtr timer_;
 
-  /** @brief Cached hardware specifications retrieved from camera_utils. */
-  std::optional<camera_utils::CameraInfo> cameraSpecs_;
+    /** @brief Cached hardware specifications retrieved from camera_utils. */
+    std::optional < camera_utils::CameraInfo > cameraSpecs_;
 
-  /** @brief Descriptive name of the camera hardware. */
-  std::string cameraName_;
+    /** @brief Descriptive name of the camera hardware. */
+    std::string cameraName_;
 
-  /** @brief Limit for consecutive dropped frames before a fatal error is
-   * triggered. */
-  int maxMissedFrameCount_;
+    /** @brief Limit for consecutive dropped frames before a fatal error is
+     * triggered. */
+    int maxMissedFrameCount_;
 
-  /** @brief Counter tracking current consecutive missed frames. */
-  int missedFrameCount_ = 0;
+    /** @brief Counter tracking current consecutive missed frames. */
+    int missedFrameCount_ = 0;
 
-  /** @brief Internal state indicating if the stream is currently active. */
-  bool streamPaused_ = false;
+    /** @brief Internal state indicating if the stream is currently active. */
+    bool streamPaused_ = false;
 
-  /** @brief Hardware operation timeout duration in seconds. Default is 5. */
-  int timeoutSeconds = 5;
+    /** @brief Hardware operation timeout duration in seconds. Default is 5. */
+    int timeoutSeconds = 5;
 
-  /**
-   * @brief Sets up publishers, services, and hardware initialization logic.
-   */
-  void InitializeServer();
+    /**
+     * @brief Sets up publishers, services, and hardware initialization logic.
+     */
+    void InitializeServer();
 
-  /**
-   * @brief Callback function triggered by the wall timer to capture and process
-   * frames.
-   */
-  void StartStreaming();
+    /**
+     * @brief Callback function triggered by the wall timer to capture and process
+     * frames.
+     */
+    void StartStreaming();
 
-  /**
-   * @brief Stops timers and initiates a clean ROS 2 shutdown sequence.
-   */
-  void ShutdownServer();
+    /**
+     * @brief Stops timers and initiates a clean ROS 2 shutdown sequence.
+     */
+    void ShutdownServer();
 
-  /**
-   * @brief Extracts luminosity and publishes to the topic.
-   * @param frame Reference to the current OpenCV matrix frame.
-   */
-  void PublishLuminosity(const cv::Mat & frame);
+    /**
+     * @brief Extracts luminosity and publishes to the topic.
+     * @param frame Reference to the current OpenCV matrix frame.
+     */
+    void PublishLuminosity(const cv::Mat & frame);
 
-  /**
-   * @brief Compresses the frame to JPEG and publishes the message.
-   * @param frame Reference to the current OpenCV matrix frame.
-   */
-  void PublishImage(const cv::Mat & frame);
+    /**
+     * @brief Compresses the frame to JPEG and publishes the message.
+     * @param frame Reference to the current OpenCV matrix frame.
+     */
+    void PublishImage(const cv::Mat & frame);
 
-  /**
-   * @brief Callback for the start/resume service.
-   * @param[in] header RMW request metadata.
-   * @param[in] request Empty trigger request.
-   * @param[out] response Result status and descriptive message.
-   */
-  void HandleStartRequest(
-    const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    /**
+     * @brief Callback for the start/resume service.
+     * @param[in] header RMW request metadata.
+     * @param[in] request Empty trigger request.
+     * @param[out] response Result status and descriptive message.
+     */
+    void HandleStartRequest(
+      const std::shared_ptr < rmw_request_id_t > header,
+      const std::shared_ptr < std_srvs::srv::Trigger::Request > request,
+      std::shared_ptr < std_srvs::srv::Trigger::Response > response);
 
-  /**
-   * @brief Callback for the pause service.
-   * @param[in] header RMW request metadata.
-   * @param[in] request Empty trigger request.
-   * @param[out] response Result status and descriptive message.
-   */
-  void HandlePauseRequest(
-    const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+    /**
+     * @brief Callback for the pause service.
+     * @param[in] header RMW request metadata.
+     * @param[in] request Empty trigger request.
+     * @param[out] response Result status and descriptive message.
+     */
+    void HandlePauseRequest(
+      const std::shared_ptr < rmw_request_id_t > header,
+      const std::shared_ptr < std_srvs::srv::Trigger::Request > request,
+      std::shared_ptr < std_srvs::srv::Trigger::Response > response);
 
-  /**
-   * @brief Callback for the shutdown service.
-   * @param[in] header RMW request metadata.
-   * @param[in] request Empty trigger request.
-   * @param[out] response Result status and descriptive message.
-   */
-  void HandleShutdownRequest(
-    const std::shared_ptr<rmw_request_id_t> header,
-    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-};
+    /**
+     * @brief Callback for the shutdown service.
+     * @param[in] header RMW request metadata.
+     * @param[in] request Empty trigger request.
+     * @param[out] response Result status and descriptive message.
+     */
+    void HandleShutdownRequest(
+      const std::shared_ptr < rmw_request_id_t > header,
+      const std::shared_ptr < std_srvs::srv::Trigger::Request > request,
+      std::shared_ptr < std_srvs::srv::Trigger::Response > response);
+  };
 } // namespace stryderx
 
 #endif // STRYDERX__CAMERA_SERVER_NODE_H_

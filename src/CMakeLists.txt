@@ -8,7 +8,7 @@ ament_target_dependencies(${CAMERA_SERVER_EXE_NAME}
     sensor_msgs
     std_msgs
     std_srvs)
-    
+
 target_link_libraries(${CAMERA_SERVER_EXE_NAME}
     camera_driver
     ${OpenCV_LIBS})
