@@ -19,9 +19,9 @@ repos:
   hooks:
   - id: check-todos
     name: Check for bare TODOs and FIXMEs
-    entry: grep -riE "\b(todo|fixme)\b"
+    entry: grep -nHIRE "\b(todo|fixme)\b"
     language: system
-    files: \.(hpp|cpp|h|c|py)$
+    files: \.(hpp|cpp|h|c|py|cmake)|CMakeLists\.txt$
   - id: uncrustify
     name: Hardware Linter (Uncrustify)
     entry: ament_uncrustify --reformat -c ./cmake/.uncrustify.cfg
