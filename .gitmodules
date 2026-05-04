@@ -1,6 +1,3 @@
 [submodule "third_party/camera_driver"]
 	path = third_party/camera_driver
 	url = git@github.com:jrendon102/camera_driver.git
-[submodule "third_party/ROS-robot-expansion-board"]
-	path = third_party/ROS-robot-expansion-board
-	url = https://github.com/YahboomTechnology/ROS-robot-expansion-board.git
