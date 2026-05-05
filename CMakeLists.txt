@@ -34,8 +34,8 @@ add_subdirectory(include)
 ament_python_install_package(${PROJECT_NAME})
 
 install(PROGRAMS
-  scripts/${STEERING_SERVO_EXE_NAME}
-  scripts/${MOTOR_CONTROL_EXE_NAME}
+  scripts/${STEERING_CONTROLLER_EXE_NAME}
+  scripts/${DRIVE_CONTROLLER_EXE_NAME}
   DESTINATION lib/${PROJECT_NAME}
 )
 
