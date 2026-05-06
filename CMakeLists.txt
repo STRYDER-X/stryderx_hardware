@@ -10,9 +10,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV 4 REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
@@ -27,5 +30,13 @@ include(Doxygen)
 add_subdirectory(third_party)
 add_subdirectory(src)
 add_subdirectory(include)
+
+ament_python_install_package(${PROJECT_NAME})
+
+install(PROGRAMS
+  scripts/${STEERING_CONTROLLER_EXE_NAME}
+  scripts/${DRIVE_CONTROLLER_EXE_NAME}
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()
