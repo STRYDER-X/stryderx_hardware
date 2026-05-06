@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import rclpy
-from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from Rosmaster_Lib import Rosmaster
 from sensor_msgs.msg import Joy
@@ -20,7 +19,6 @@ class MotorControlNode(Node):
         super().__init__("motor_control_node")
         self.robot_ = Rosmaster(car_type=4)
         self.clamp_esc_angle_ = self.declare_parameter("clamp_esc_angle", True).value
-        self.vel_sub_ = self.create_subscription(Twist, "~/cmd_vel", self.motor_control_cb, 5)
         self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
         self.get_logger().info("Motor Control Node Intialized.")
 

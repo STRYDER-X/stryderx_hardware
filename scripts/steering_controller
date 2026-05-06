@@ -3,7 +3,6 @@ import rclpy
 from rclpy.node import Node
 from Rosmaster_Lib.Rosmaster_Lib import Rosmaster
 from sensor_msgs.msg import Joy
-from std_msgs.msg import Int32
 
 # X-Box 360
 LEFT_JOYSTICK = 0
@@ -16,9 +15,6 @@ class SteeringServoNode(Node):
     def __init__(self) -> None:
         super().__init__("servo_node")
         self.robot = Rosmaster(car_type=4)
-        self.steering_sub_ = self.create_subscription(
-            Int32, "~/steering_joint/angle", self.steering_cb, 5
-        )
         self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
 
     def joystick_cb(self, msg: Joy) -> None:
