@@ -5,60 +5,62 @@ from rclpy.node import Node
 from Rosmaster_Lib import Rosmaster
 from sensor_msgs.msg import Joy
 
-# X-Box 360
-LT = 2  # Forward
-RT = 5  # Reverse
+# X-Box 360 trigger axis indexes published by joy_node.
+LT = 2  # Left trigger: reverse
+RT = 5  # Right trigger: forward
 
+# ESC PWM servo angles. Neutral stops the motor.
 ESC_MIN_ANGLE = 80
 ESC_NEUTRAL_ANGLE = 90
 ESC_MAX_ANGLE = 100
 
 
-class MotorControlNode(Node):
-    def __init__(self):
+class DriveController(Node):
+    """ROS 2 node that calculates and sets ESC throttle commands."""
+
+    def __init__(self) -> None:
         super().__init__("motor_control_node")
-        self.robot_ = Rosmaster(car_type=4)
-        self.clamp_esc_angle_ = self.declare_parameter("clamp_esc_angle", True).value
+        self.robot_: Rosmaster = Rosmaster(car_type=4)
+
+        # Keep the final ESC command inside the tested angle range by default.
+        self.clamp_esc_angle_: bool = bool(self.declare_parameter("clamp_esc_angle", True).value)
         self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
-        self.get_logger().info("Motor Control Node Intialized.")
+        self.get_logger().info("Motor Control Node Initialized.")
 
     def joystick_cb(self, msg: Joy) -> None:
         """
-        Callback for joystick input to control the ESC throttle.
-        Maps dual-trigger input to a combined PWM angle.
+        Convert joystick trigger input into a single ESC angle.
 
         Args:
-            msg (Joy): Joystick message.
+            msg: Joystick message from joy_node.
         """
-        # Forward Logic (Right Trigger)
-        # Normalize RT from [-1,1] to target angle [80, 90]
-        # Calculate deviation from neutral (90) to determine forward intensity
-        rt_input = max(-1, min(1, msg.axes[RT]))
-        rt_angle = (5 * rt_input) + 85
-        rt_offset = rt_angle - ESC_NEUTRAL_ANGLE
+        # Clamp raw trigger axes before converting them to offsets from neutral.
+        rt_input: float = max(-1.0, min(1.0, msg.axes[RT]))
+        lt_input: float = max(-1.0, min(1.0, msg.axes[LT]))
 
-        # Reverse Logic (Left Trigger)
-        # Normalize RT input from [-1, 1] to target angle [100, 90]
-        # Calculate deviation from neutral (90) to determine reverse intensity
-        lt_input = max(-1, min(1, msg.axes[LT]))
-        lt_angle = 95 - (5 * lt_input)
-        lt_offset = lt_angle - ESC_NEUTRAL_ANGLE
+        # Right trigger pulls the angle below neutral for forward throttle.
+        rt_angle: float = (5.0 * rt_input) + 85.0
+        rt_offset: float = rt_angle - ESC_NEUTRAL_ANGLE
 
-        # Create Net Sum logic to determine esc_angle and clamp
-        esc_angle = ESC_NEUTRAL_ANGLE + rt_offset + lt_offset
+        # Left trigger pushes the angle above neutral for reverse throttle.
+        lt_angle: float = 95.0 - (5.0 * lt_input)
+        lt_offset: float = lt_angle - ESC_NEUTRAL_ANGLE
+
+        esc_angle: float = ESC_NEUTRAL_ANGLE + rt_offset + lt_offset
         if self.clamp_esc_angle_:
             esc_angle = max(ESC_MIN_ANGLE, min(ESC_MAX_ANGLE, esc_angle))
 
         self.get_logger().info(f"Throttle speed to angle:{esc_angle}")
         self.robot_.set_pwm_servo(servo_id=2, angle=esc_angle)
 
-    def cleanup(self):
+    def cleanup(self) -> None:
+        """Return the ESC to neutral before shutting down the node."""
         self.robot_.set_pwm_servo(servo_id=2, angle=ESC_NEUTRAL_ANGLE)
 
 
 def main(args=None) -> None:
     rclpy.init(args=args)
-    node = MotorControlNode()
+    node = DriveController()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
