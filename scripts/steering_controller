@@ -5,14 +5,6 @@ from rclpy.node import Node
 from Rosmaster_Lib.Rosmaster_Lib import Rosmaster
 from sensor_msgs.msg import Joy
 
-# X-Box 360 left-stick horizontal axis index published by joy_node.
-LEFT_JOYSTICK = 0
-
-# Steering servo angle bounds.
-MIN_ANGLE = 40
-NEUTRAL_ANGLE = 70
-MAX_ANGLE = 100
-
 
 class SteeringController(Node):
     """ROS 2 node that calculates and sets steering angle."""
@@ -20,6 +12,22 @@ class SteeringController(Node):
     def __init__(self) -> None:
         super().__init__("servo_node")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
+
+        self.declare_parameters(
+            namespace="",
+            parameters=[
+                ("left_joystick", 0),
+                ("min_angle", 40),
+                ("neutral_angle", 70),
+                ("max_angle", 100),
+            ],
+        )
+
+        self.left_joystick_: int = self.get_parameter("left_joystick").value
+        self.min_angle_: int = self.get_parameter("min_angle").value
+        self.neutral_angle_: int = self.get_parameter("neutral_angle").value
+        self.max_angle_: int = self.get_parameter("max_angle").value
+
         self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
 
     def joystick_cb(self, msg: Joy) -> None:
@@ -30,9 +38,9 @@ class SteeringController(Node):
             msg: Joystick message from joy_node.
         """
         # Clamp the raw axis before mapping [-1, 1] into [100, 40].
-        joystick_input: float = max(-1.0, min(1.0, msg.axes[LEFT_JOYSTICK]))
-        joystick_angle: float = NEUTRAL_ANGLE - (30.0 * joystick_input)
-        joystick_angle = max(MIN_ANGLE, min(MAX_ANGLE, joystick_angle))
+        left_joystick: float = max(-1.0, min(1.0, msg.axes[self.left_joystick_]))
+        joystick_angle: float = self.neutral_angle_ - (30.0 * left_joystick)
+        joystick_angle = max(self.min_angle_, min(self.max_angle_, joystick_angle))
 
         self.get_logger().info(f"Setting steering servo angle to {joystick_angle}")
         self.robot_.set_pwm_servo(servo_id=1, angle=joystick_angle)

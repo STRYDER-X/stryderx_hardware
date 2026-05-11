@@ -5,15 +5,6 @@ from rclpy.node import Node
 from Rosmaster_Lib import Rosmaster
 from sensor_msgs.msg import Joy
 
-# X-Box 360 trigger axis indexes published by joy_node.
-LT = 2  # Left trigger: reverse
-RT = 5  # Right trigger: forward
-
-# ESC PWM servo angles. Neutral stops the motor.
-ESC_MIN_ANGLE = 80
-ESC_NEUTRAL_ANGLE = 90
-ESC_MAX_ANGLE = 100
-
 
 class DriveController(Node):
     """ROS 2 node that calculates and sets ESC throttle commands."""
@@ -22,8 +13,25 @@ class DriveController(Node):
         super().__init__("motor_control_node")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
-        # Keep the final ESC command inside the tested angle range by default.
-        self.clamp_esc_angle_: bool = bool(self.declare_parameter("clamp_esc_angle", True).value)
+        self.declare_parameters(
+            namespace="",
+            parameters=[
+                ("left_trigger_button", 2),
+                ("right_trigger_button", 5),
+                ("esc_min_angle", 80),
+                ("esc_neutral_angle", 90),
+                ("esc_max_angle", 100),
+                ("clamp_esc_angle", True),
+            ],
+        )
+
+        self.left_trigger_button_: int = self.get_parameter("left_trigger_button").value
+        self.right_trigger_button_: int = self.get_parameter("right_trigger_button").value
+        self.esc_min_angle_: int = self.get_parameter("esc_min_angle").value
+        self.esc_neutral_angle_: int = self.get_parameter("esc_neutral_angle").value
+        self.esc_max_angle_: int = self.get_parameter("esc_max_angle").value
+        self.clamp_esc_angle_: bool = self.get_parameter("clamp_esc_angle").value
+
         self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
         self.get_logger().info("Motor Control Node Initialized.")
 
@@ -35,27 +43,29 @@ class DriveController(Node):
             msg: Joystick message from joy_node.
         """
         # Clamp raw trigger axes before converting them to offsets from neutral.
-        rt_input: float = max(-1.0, min(1.0, msg.axes[RT]))
-        lt_input: float = max(-1.0, min(1.0, msg.axes[LT]))
+        rt_input: float = max(-1.0, min(1.0, msg.axes[self.right_trigger_button_]))
+        lt_input: float = max(-1.0, min(1.0, msg.axes[self.left_trigger_button_]))
 
         # Right trigger pulls the angle below neutral for forward throttle.
         rt_angle: float = (5.0 * rt_input) + 85.0
-        rt_offset: float = rt_angle - ESC_NEUTRAL_ANGLE
+        rt_offset: float = rt_angle - self.esc_neutral_angle_
 
         # Left trigger pushes the angle above neutral for reverse throttle.
         lt_angle: float = 95.0 - (5.0 * lt_input)
-        lt_offset: float = lt_angle - ESC_NEUTRAL_ANGLE
+        lt_offset: float = lt_angle - self.esc_neutral_angle_
 
-        esc_angle: float = ESC_NEUTRAL_ANGLE + rt_offset + lt_offset
+        esc_angle: float = self.esc_neutral_angle_ + rt_offset + lt_offset
+
+        # Keep the final ESC command inside the tested angle range.
         if self.clamp_esc_angle_:
-            esc_angle = max(ESC_MIN_ANGLE, min(ESC_MAX_ANGLE, esc_angle))
+            esc_angle = max(self.esc_min_angle_, min(self.esc_max_angle_, esc_angle))
 
         self.get_logger().info(f"Throttle speed to angle:{esc_angle}")
         self.robot_.set_pwm_servo(servo_id=2, angle=esc_angle)
 
     def cleanup(self) -> None:
         """Return the ESC to neutral before shutting down the node."""
-        self.robot_.set_pwm_servo(servo_id=2, angle=ESC_NEUTRAL_ANGLE)
+        self.robot_.set_pwm_servo(servo_id=2, angle=self.esc_neutral_angle_)
 
 
 def main(args=None) -> None:
