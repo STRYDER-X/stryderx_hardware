@@ -1,5 +1,5 @@
 /**
- * @file camera_server_node.h
+ * @file camera_server.h
  * @author Julian A. Rendon (jarendon10@gmail.com)
  * @brief ROS 2 node for managing camera hardware.
  * @version 0.1
@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef STRYDERX__CAMERA_SERVER_NODE_H_
-#define STRYDERX__CAMERA_SERVER_NODE_H_
+#ifndef STRYDERX__CAMERA_SERVER_H_
+#define STRYDERX__CAMERA_SERVER_H_
 
 #include <cv_bridge/cv_bridge.h>
 #include <memory>
@@ -32,30 +32,30 @@ namespace stryderx
 {
 
 /**
- * @brief Defines the name of the camera server node.
+ * @brief Defines the name of the camera server.
  */
   constexpr char CAMERA_SERVER_NODE_NAME[] = "CAMERA SERVER";
 
 /**
- * @class CameraServerNode
+ * @class CameraServer
  * @brief A ROS 2 Node that manages camera hardware and publishes
  * image/luminosity data.
  * This class inherits from rclcpp::Node for ROS communication and owns a
  * camera_driver::Camera instance for low-level hardware access.
  */
-  class CameraServerNode: public rclcpp::Node
+  class CameraServer: public rclcpp::Node
   {
 public:
     /**
-     * @brief Construct a new CameraServerNode object from ROS parameters.
+     * @brief Construct a new CameraServer object from ROS parameters.
      */
-    CameraServerNode();
+    CameraServer();
 
     /**
-     * @brief Destroy the CameraServerNode object and ensures hardware is
+     * @brief Destroy the CameraServer object and ensures hardware is
      * released.
      */
-    virtual ~CameraServerNode();
+    virtual ~CameraServer();
 
 private:
     /** @brief Publisher for luminosity data extracted from camera frames. */
@@ -159,4 +159,4 @@ private:
   };
 } // namespace stryderx
 
-#endif // STRYDERX__CAMERA_SERVER_NODE_H_
+#endif // STRYDERX__CAMERA_SERVER_H_

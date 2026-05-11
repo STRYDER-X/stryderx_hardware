@@ -1,5 +1,5 @@
 /**
- * @file camera_server_node.cpp
+ * @file camera_server.cpp
  * @author Julian A. Rendon (jarendon10@gmail.com)
  * @brief ROS 2 node for managing camera hardware.
  * @version 0.1
@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026
  *
  */
-#include "camera_server_node.h"
+#include "camera_server.h"
 
 #include <chrono>
 #include <memory>
@@ -20,7 +20,7 @@ using namespace std::chrono_literals;
 namespace stryderx
 {
 
-CameraServerNode::CameraServerNode()
+CameraServer::CameraServer()
   : Node(CAMERA_SERVER_NODE_NAME)
 {
   this->declare_parameter<std::string>("camera_name", "USB CAMERA");
@@ -41,12 +41,12 @@ CameraServerNode::CameraServerNode()
   InitializeServer();
 }
 
-CameraServerNode::~CameraServerNode()
+CameraServer::~CameraServer()
 {
   RCLCPP_INFO(this->get_logger(), "%s()::Server stopped.", __func__);
 }
 
-void CameraServerNode::InitializeServer()
+void CameraServer::InitializeServer()
 {
   RCLCPP_INFO(this->get_logger(), "%s()::Setting up camera server.", __func__);
 
@@ -99,7 +99,7 @@ void CameraServerNode::InitializeServer()
     });
 }
 
-void CameraServerNode::StartStreaming()
+void CameraServer::StartStreaming()
 {
   if (streamPaused_)
   {
@@ -133,7 +133,7 @@ void CameraServerNode::StartStreaming()
     cameraSpecs_->name.c_str());
 }
 
-void CameraServerNode::ShutdownServer()
+void CameraServer::ShutdownServer()
 {
   const auto camera_name =
     cameraSpecs_ ? cameraSpecs_->name : std::string("unknown camera");
@@ -151,7 +151,7 @@ void CameraServerNode::ShutdownServer()
   rclcpp::shutdown();
 }
 
-void CameraServerNode::PublishLuminosity(const cv::Mat & frame)
+void CameraServer::PublishLuminosity(const cv::Mat & frame)
 {
   /* NOTE: Create shallow copy of frame to satisfy the non-const 'cv::Mat &'
      signature of GetLuminosity without duplicating the heavy pixel data. */
@@ -174,7 +174,7 @@ void CameraServerNode::PublishLuminosity(const cv::Mat & frame)
   }
 }
 
-void CameraServerNode::PublishImage(const cv::Mat & frame)
+void CameraServer::PublishImage(const cv::Mat & frame)
 {
   cv_bridge::CvImage cv_image;
   cv_image.header.stamp = this->now();
@@ -190,7 +190,7 @@ void CameraServerNode::PublishImage(const cv::Mat & frame)
   imageCompressedPub_->publish(*compressed_image);
 }
 
-void CameraServerNode::HandleStartRequest(
+void CameraServer::HandleStartRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -215,7 +215,7 @@ void CameraServerNode::HandleStartRequest(
     response->message.c_str());
 }
 
-void CameraServerNode::HandlePauseRequest(
+void CameraServer::HandlePauseRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -240,7 +240,7 @@ void CameraServerNode::HandlePauseRequest(
     response->message.c_str());
 }
 
-void CameraServerNode::HandleShutdownRequest(
+void CameraServer::HandleShutdownRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -258,9 +258,9 @@ void CameraServerNode::HandleShutdownRequest(
 
 /**
  * @brief Entry point for the Camera Server Node.
- * * Initializes the ROS 2 communications, instantiates the CameraServerNode
+ * Initializes the ROS 2 communications, instantiates the CameraServer
  * with parameter-driven camera settings, and begins the execution loop.
- * * @param argc The number of command-line arguments.
+ * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
  * @return int Execution status (0 for success).
  */
@@ -268,7 +268,7 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node =
-    std::make_shared<stryderx::CameraServerNode>();
+    std::make_shared<stryderx::CameraServer>();
   rclcpp::spin(node);
   rclcpp::shutdown();
 
