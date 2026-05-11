@@ -40,27 +40,16 @@ namespace stryderx
  * @class CameraServerNode
  * @brief A ROS 2 Node that manages camera hardware and publishes
  * image/luminosity data.
- * * This class inherits from rclcpp::Node for ROS communication and
- * camera_driver::Camera for low-level hardware access.
+ * This class inherits from rclcpp::Node for ROS communication and owns a
+ * camera_driver::Camera instance for low-level hardware access.
  */
-  class CameraServerNode: public rclcpp::Node, protected camera_driver::Camera
+  class CameraServerNode: public rclcpp::Node
   {
 public:
     /**
-     * @brief Construct a new CameraServerNode object with default settings.
+     * @brief Construct a new CameraServerNode object from ROS parameters.
      */
     CameraServerNode();
-
-    /**
-     * @brief Construct a new CameraServerNode object with specific hardware
-     * parameters.
-     *
-     * @param name The name of the camera.
-     * @param type The type of the camera (e.g., "USB", "CSI").
-     * @param index The device index (e.g., 0 for /dev/video0).
-     * @param fps The target frames per second.
-     */
-    CameraServerNode(std::string name, std::string type, int index, int fps);
 
     /**
      * @brief Destroy the CameraServerNode object and ensures hardware is
@@ -88,11 +77,11 @@ private:
     /** @brief Main processing timer to poll the camera and publish data. */
     rclcpp::TimerBase::SharedPtr timer_;
 
-    /** @brief Cached hardware specifications retrieved from camera_utils. */
-    std::optional < camera_utils::CameraInfo > cameraSpecs_;
+    /** @brief Camera driver configured from ROS parameters. */
+    std::optional < camera_driver::Camera > camera_;
 
-    /** @brief Descriptive name of the camera hardware. */
-    std::string cameraName_;
+    /** @brief Cached hardware specifications from the configured camera. */
+    std::optional < camera_utils::CameraInfo > cameraSpecs_;
 
     /** @brief Limit for consecutive dropped frames before a fatal error is
      * triggered. */
@@ -104,8 +93,8 @@ private:
     /** @brief Internal state indicating if the stream is currently active. */
     bool streamPaused_ = false;
 
-    /** @brief Hardware operation timeout duration in seconds. Default is 5. */
-    int timeoutSeconds = 5;
+    /** @brief Hardware operation timeout duration in seconds. */
+    int timeoutSeconds_;
 
     /**
      * @brief Sets up publishers, services, and hardware initialization logic.
