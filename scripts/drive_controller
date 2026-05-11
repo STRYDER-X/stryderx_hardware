@@ -10,7 +10,7 @@ class DriveController(Node):
     """ROS 2 node that calculates and sets ESC throttle commands."""
 
     def __init__(self) -> None:
-        super().__init__("motor_control_node")
+        super().__init__("DRIVE CONTROLLER")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
         self.declare_parameters(

@@ -10,7 +10,7 @@ class SteeringController(Node):
     """ROS 2 node that calculates and sets steering angle."""
 
     def __init__(self) -> None:
-        super().__init__("servo_node")
+        super().__init__("STEERING CONTROLLER")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
         self.declare_parameters(
