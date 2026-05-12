@@ -264,7 +264,7 @@ void CameraServer::HandleShutdownRequest(
  * @param argv The array of command-line arguments.
  * @return int Execution status (0 for success).
  */
-int main(int argc, char ** argv)
+int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
   auto node =

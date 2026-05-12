@@ -1,6 +1,8 @@
 set(CAMERA_SERVER_EXE_SOURCES ${CAMERA_SERVER_EXE_NAME}.cpp)
+set(JOYSTICK_TELEOP_EXE_SOURCES ${JOYSTICK_TELEOP_EXE_NAME}.cpp)
 
 add_executable(${CAMERA_SERVER_EXE_NAME} ${CAMERA_SERVER_EXE_SOURCES})
+add_executable(${JOYSTICK_TELEOP_EXE_NAME} ${JOYSTICK_TELEOP_EXE_SOURCES})
 
 ament_target_dependencies(${CAMERA_SERVER_EXE_NAME}
     cv_bridge
@@ -9,10 +11,16 @@ ament_target_dependencies(${CAMERA_SERVER_EXE_NAME}
     std_msgs
     std_srvs)
 
+ament_target_dependencies(${JOYSTICK_TELEOP_EXE_NAME}
+    geometry_msgs
+    rclcpp
+    sensor_msgs)
+
 target_link_libraries(${CAMERA_SERVER_EXE_NAME}
     camera_driver
     ${OpenCV_LIBS})
 
 install(TARGETS
     ${CAMERA_SERVER_EXE_NAME}
+    ${JOYSTICK_TELEOP_EXE_NAME}
     DESTINATION lib/${PROJECT_NAME})

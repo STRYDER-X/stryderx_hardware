@@ -9,8 +9,8 @@
  *
  */
 
-#ifndef STRYDERX__CAMERA_SERVER_H_
-#define STRYDERX__CAMERA_SERVER_H_
+#ifndef STRYDERX_CAMERA_SERVER_H_
+#define STRYDERX_CAMERA_SERVER_H_
 
 #include <cv_bridge/cv_bridge.h>
 #include <memory>
@@ -32,7 +32,7 @@ namespace stryderx
 {
 
 /**
- * @brief Defines the name of the camera server.
+ * @brief Defines the name of the camera server node.
  */
   constexpr char CAMERA_SERVER_NODE_NAME[] = "CAMERA SERVER";
 
@@ -159,4 +159,4 @@ private:
   };
 } // namespace stryderx
 
-#endif // STRYDERX__CAMERA_SERVER_H_
+#endif // STRYDERX_CAMERA_SERVER_H_

@@ -1,5 +1,6 @@
 # C++ Nodes
 set(CAMERA_SERVER_EXE_NAME camera_server)
+set(JOYSTICK_TELEOP_EXE_NAME joystick_teleop)
 
 # Python Nodes
 set(DRIVE_CONTROLLER_EXE_NAME drive_controller)
