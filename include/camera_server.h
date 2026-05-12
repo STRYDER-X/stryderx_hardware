@@ -34,7 +34,7 @@ namespace stryderx
 /**
  * @brief Defines the name of the camera server node.
  */
-  constexpr char CAMERA_SERVER_NODE_NAME[] = "CAMERA SERVER";
+  constexpr char CAMERA_SERVER_NODE_NAME[] = "camera_server";
 
 /**
  * @class CameraServer

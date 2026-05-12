@@ -1,49 +1,61 @@
 #!/usr/bin/env python3
 
 import rclpy
+from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from Rosmaster_Lib.Rosmaster_Lib import Rosmaster
-from sensor_msgs.msg import Joy
+
+
+def map_range(value: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
+    """
+    Maps a values [in_min, in_max] to [out-min, out_max] with clamping.
+    """
+    # Prevent division by zero if input range is zero. In this case, return the midpoint of the output range.
+    if in_min == in_max:
+        return float(out_max - out_min)
+
+    mapped_value = out_min + ((value - in_min) * (out_max - out_min)) / (in_max - in_min)
+
+    # Prevent values from exceeding the output bounds
+    lower_bound = min(out_min, out_max)
+    upper_bound = max(out_min, out_max)
+
+    return max(lower_bound, min(mapped_value, upper_bound))
 
 
 class SteeringController(Node):
     """ROS 2 node that calculates and sets steering angle."""
 
     def __init__(self) -> None:
-        super().__init__("STEERING CONTROLLER")
+        super().__init__("steering_controller")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
         self.declare_parameters(
             namespace="",
             parameters=[
-                ("left_joystick", 0),
                 ("min_angle", 40),
-                ("neutral_angle", 70),
                 ("max_angle", 100),
             ],
         )
 
-        self.left_joystick_: int = self.get_parameter("left_joystick").value
         self.min_angle_: int = self.get_parameter("min_angle").value
-        self.neutral_angle_: int = self.get_parameter("neutral_angle").value
         self.max_angle_: int = self.get_parameter("max_angle").value
 
-        self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
+        self.cmd_vel_sub_ = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_cb, 5)
 
-    def joystick_cb(self, msg: Joy) -> None:
+    def cmd_vel_cb(self, msg: Twist) -> None:
         """
-        Convert joystick left-stick input into a steering servo angle.
+        Convert angular velocity input into a steering servo angle.
 
         Args:
-            msg: Joystick message from joy_node.
+            msg: Command velocity message.
         """
-        # Clamp the raw axis before mapping [-1, 1] into [100, 40].
-        left_joystick: float = max(-1.0, min(1.0, msg.axes[self.left_joystick_]))
-        joystick_angle: float = self.neutral_angle_ - (30.0 * left_joystick)
-        joystick_angle = max(self.min_angle_, min(self.max_angle_, joystick_angle))
+        steering_angle: float = map_range(
+            msg.angular.z, -1.0, 1.0, self.max_angle_, self.min_angle_
+        )
 
-        self.get_logger().info(f"Setting steering servo angle to {joystick_angle}")
-        self.robot_.set_pwm_servo(servo_id=1, angle=joystick_angle)
+        self.get_logger().info(f"Setting steering servo angle to {steering_angle}")
+        self.robot_.set_pwm_servo(servo_id=1, angle=steering_angle)
 
 
 def main(args=None) -> None:
