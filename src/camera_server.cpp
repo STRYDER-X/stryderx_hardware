@@ -1,5 +1,5 @@
 /**
- * @file camera_server_node.cpp
+ * @file camera_server.cpp
  * @author Julian A. Rendon (jarendon10@gmail.com)
  * @brief ROS 2 node for managing camera hardware.
  * @version 0.1
@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026
  *
  */
-#include "camera_server_node.h"
+#include "camera_server.h"
 
 #include <chrono>
 #include <memory>
@@ -20,30 +20,36 @@ using namespace std::chrono_literals;
 namespace stryderx
 {
 
-CameraServerNode::CameraServerNode()
-  : Node(CAMERA_SERVER_NODE_NAME), Camera()
+CameraServer::CameraServer()
+  : Node(CAMERA_SERVER_NODE_NAME)
 {
+  this->declare_parameter<std::string>("camera_name", "USB CAMERA");
+  this->declare_parameter<std::string>("camera_type", "USB");
+  this->declare_parameter<int>("device_index", 0);
+  this->declare_parameter<int>("fps", 30);
+  this->declare_parameter<int>("timeout_seconds", 5);
+
+  camera_.emplace(
+    this->get_parameter("camera_name").as_string(),
+    this->get_parameter("camera_type").as_string(),
+    this->get_parameter("device_index").as_int(),
+    this->get_parameter("fps").as_int()
+    );
+  cameraSpecs_ = camera_->GetCameraSpecs();
+  timeoutSeconds_ = this->get_parameter("timeout_seconds").as_int();
+
   InitializeServer();
 }
 
-CameraServerNode::CameraServerNode(
-  std::string name, std::string type,
-  int index, int fps)
-  : Node(CAMERA_SERVER_NODE_NAME), Camera(name, type, index, fps)
-{
-  InitializeServer();
-}
-
-CameraServerNode::~CameraServerNode()
+CameraServer::~CameraServer()
 {
   RCLCPP_INFO(this->get_logger(), "%s()::Server stopped.", __func__);
 }
 
-void CameraServerNode::InitializeServer()
+void CameraServer::InitializeServer()
 {
   RCLCPP_INFO(this->get_logger(), "%s()::Setting up camera server.", __func__);
 
-  cameraSpecs_ = this->GetCameraSpecs();
   if (!cameraSpecs_.has_value())
   {
     RCLCPP_FATAL(
@@ -54,8 +60,7 @@ void CameraServerNode::InitializeServer()
     return;
   }
 
-  cameraName_ = cameraSpecs_->name;
-  maxMissedFrameCount_ = timeoutSeconds * cameraSpecs_->fps;
+  maxMissedFrameCount_ = timeoutSeconds_ * cameraSpecs_->fps;
 
   luminosityPub_ =
     this->create_publisher<std_msgs::msg::Float32>("~/luminosity_value", 10);
@@ -87,21 +92,21 @@ void CameraServerNode::InitializeServer()
       this->HandleShutdownRequest(header, request, response);
     });
 
-  RCLCPP_INFO(this->get_logger(), "%s()::Sever started.", __func__);
+  RCLCPP_INFO(this->get_logger(), "%s()::Server started.", __func__);
 
   timer_ = this->create_wall_timer(33ms, [this]() {
       this->StartStreaming();
     });
 }
 
-void CameraServerNode::StartStreaming()
+void CameraServer::StartStreaming()
 {
   if (streamPaused_)
   {
     return;
   }
 
-  auto frame = CaptureFrame();
+  auto frame = camera_->CaptureFrame();
 
   if (!frame.has_value())
   {
@@ -125,16 +130,19 @@ void CameraServerNode::StartStreaming()
 
   RCLCPP_INFO_ONCE(
     this->get_logger(), "%s()::Feeds live for [%s].", __func__,
-    cameraName_.c_str());
+    cameraSpecs_->name.c_str());
 }
 
-void CameraServerNode::ShutdownServer()
+void CameraServer::ShutdownServer()
 {
+  const auto camera_name =
+    cameraSpecs_ ? cameraSpecs_->name : std::string("unknown camera");
+
   if (rclcpp::ok())
   {
     RCLCPP_INFO(
       this->get_logger(), "%s()::Stopped live feeds for [%s].",
-      __func__, cameraName_.c_str());
+      __func__, camera_name.c_str());
   }
   if (timer_ && !timer_->is_canceled())
   {
@@ -143,9 +151,9 @@ void CameraServerNode::ShutdownServer()
   rclcpp::shutdown();
 }
 
-void CameraServerNode::PublishLuminosity(const cv::Mat & frame)
+void CameraServer::PublishLuminosity(const cv::Mat & frame)
 {
-  /* NOTE: Create shallow copy of frame to satisfies the non-const 'cv::Mat &'
+  /* NOTE: Create shallow copy of frame to satisfy the non-const 'cv::Mat &'
      signature of GetLuminosity without duplicating the heavy pixel data. */
   cv::Mat non_const_frame = frame;
   auto luminosity = camera_utils::GetLuminosity(non_const_frame);
@@ -166,7 +174,7 @@ void CameraServerNode::PublishLuminosity(const cv::Mat & frame)
   }
 }
 
-void CameraServerNode::PublishImage(const cv::Mat & frame)
+void CameraServer::PublishImage(const cv::Mat & frame)
 {
   cv_bridge::CvImage cv_image;
   cv_image.header.stamp = this->now();
@@ -182,7 +190,7 @@ void CameraServerNode::PublishImage(const cv::Mat & frame)
   imageCompressedPub_->publish(*compressed_image);
 }
 
-void CameraServerNode::HandleStartRequest(
+void CameraServer::HandleStartRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -192,11 +200,11 @@ void CameraServerNode::HandleStartRequest(
   if (streamPaused_)
   {
     streamPaused_ = false;
-    message = "Resuming live feeds for [" + cameraName_ + "].";
+    message = "Resuming live feeds for [" + cameraSpecs_->name + "].";
   }
   else
   {
-    message = "Feeds already live for [" + cameraName_ + "].";
+    message = "Feeds already live for [" + cameraSpecs_->name + "].";
   }
 
   response->success = true;
@@ -207,7 +215,7 @@ void CameraServerNode::HandleStartRequest(
     response->message.c_str());
 }
 
-void CameraServerNode::HandlePauseRequest(
+void CameraServer::HandlePauseRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -217,11 +225,11 @@ void CameraServerNode::HandlePauseRequest(
   if (!streamPaused_)
   {
     streamPaused_ = true;
-    message = "Pausing live feeds for [" + cameraName_ + "].";
+    message = "Pausing live feeds for [" + cameraSpecs_->name + "].";
   }
   else
   {
-    message = "Feeds already paused for [" + cameraName_ + "].";
+    message = "Feeds already paused for [" + cameraSpecs_->name + "].";
   }
 
   response->success = true;
@@ -232,7 +240,7 @@ void CameraServerNode::HandlePauseRequest(
     response->message.c_str());
 }
 
-void CameraServerNode::HandleShutdownRequest(
+void CameraServer::HandleShutdownRequest(
   const std::shared_ptr<rmw_request_id_t>/*header*/,
   const std::shared_ptr<std_srvs::srv::Trigger::Request>/*request*/,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -250,17 +258,17 @@ void CameraServerNode::HandleShutdownRequest(
 
 /**
  * @brief Entry point for the Camera Server Node.
- * * Initializes the ROS 2 communications, instantiates the CameraServerNode
- * with default RPi4 USB settings, and begins the execution loop.
- * * @param argc The number of command-line arguments.
+ * Initializes the ROS 2 communications, instantiates the CameraServer
+ * with parameter-driven camera settings, and begins the execution loop.
+ * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
  * @return int Execution status (0 for success).
  */
-int main(int argc, char ** argv)
+int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
   auto node =
-    std::make_shared<stryderx::CameraServerNode>("RPi4", "USB", 0, 30);
+    std::make_shared<stryderx::CameraServer>();
   rclcpp::spin(node);
   rclcpp::shutdown();
 

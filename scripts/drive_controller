@@ -1,61 +1,68 @@
 #!/usr/bin/env python3
 
 import rclpy
+from geometry_msgs.msg import Twist
 from rclpy.node import Node
 from Rosmaster_Lib import Rosmaster
-from sensor_msgs.msg import Joy
 
-# X-Box 360 trigger axis indexes published by joy_node.
-LT = 2  # Left trigger: reverse
-RT = 5  # Right trigger: forward
 
-# ESC PWM servo angles. Neutral stops the motor.
-ESC_MIN_ANGLE = 80
-ESC_NEUTRAL_ANGLE = 90
-ESC_MAX_ANGLE = 100
+def map_range(value: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
+    """
+    Maps a value from an input range to an output range with clamping.
+    """
+    # Prevent division by zero. In this case, return the midpoint of the output range.
+    if in_min == in_max:
+        return float(out_max - out_min)
+
+    mapped_value = out_min + ((value - in_min) * (out_max - out_min)) / (in_max - in_min)
+
+    # Prevent values from exceeding the output bounds
+    lower_bound = min(out_min, out_max)
+    upper_bound = max(out_min, out_max)
+
+    return max(lower_bound, min(mapped_value, upper_bound))
 
 
 class DriveController(Node):
     """ROS 2 node that calculates and sets ESC throttle commands."""
 
     def __init__(self) -> None:
-        super().__init__("motor_control_node")
+        super().__init__("drive_controller")
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
-        # Keep the final ESC command inside the tested angle range by default.
-        self.clamp_esc_angle_: bool = bool(self.declare_parameter("clamp_esc_angle", True).value)
-        self.joystick_sub_ = self.create_subscription(Joy, "/joy", self.joystick_cb, 5)
-        self.get_logger().info("Motor Control Node Initialized.")
+        self.declare_parameters(
+            namespace="",
+            parameters=[
+                ("esc_min_angle", 80),
+                ("esc_neutral_angle", 90),
+                ("esc_max_angle", 100),
+                ("clamp_esc_angle", True),
+            ],
+        )
 
-    def joystick_cb(self, msg: Joy) -> None:
+        self.esc_min_angle_: int = self.get_parameter("esc_min_angle").value
+        self.esc_max_angle_: int = self.get_parameter("esc_max_angle").value
+
+        self.joystick_sub_ = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_cb, 5)
+        self.get_logger().info("Drive Control Initialized.")
+
+    def cmd_vel_cb(self, msg: Twist) -> None:
         """
-        Convert joystick trigger input into a single ESC angle.
+        Convert linear velocity input into ESC angle.
 
         Args:
-            msg: Joystick message from joy_node.
+            msg: Command velocity message.
         """
-        # Clamp raw trigger axes before converting them to offsets from neutral.
-        rt_input: float = max(-1.0, min(1.0, msg.axes[RT]))
-        lt_input: float = max(-1.0, min(1.0, msg.axes[LT]))
+        esc_angle: float = map_range(
+            msg.linear.x, -1.0, 1.0, self.esc_max_angle_, self.esc_min_angle_
+        )
 
-        # Right trigger pulls the angle below neutral for forward throttle.
-        rt_angle: float = (5.0 * rt_input) + 85.0
-        rt_offset: float = rt_angle - ESC_NEUTRAL_ANGLE
-
-        # Left trigger pushes the angle above neutral for reverse throttle.
-        lt_angle: float = 95.0 - (5.0 * lt_input)
-        lt_offset: float = lt_angle - ESC_NEUTRAL_ANGLE
-
-        esc_angle: float = ESC_NEUTRAL_ANGLE + rt_offset + lt_offset
-        if self.clamp_esc_angle_:
-            esc_angle = max(ESC_MIN_ANGLE, min(ESC_MAX_ANGLE, esc_angle))
-
-        self.get_logger().info(f"Throttle speed to angle:{esc_angle}")
+        self.get_logger().info(f"Setting ESC servo angle to {esc_angle}")
         self.robot_.set_pwm_servo(servo_id=2, angle=esc_angle)
 
     def cleanup(self) -> None:
         """Return the ESC to neutral before shutting down the node."""
-        self.robot_.set_pwm_servo(servo_id=2, angle=ESC_NEUTRAL_ANGLE)
+        self.robot_.set_pwm_servo(servo_id=2, angle=self.esc_neutral_angle_)
 
 
 def main(args=None) -> None:
