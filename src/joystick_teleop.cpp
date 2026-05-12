@@ -4,9 +4,9 @@
  * @brief ROS 2 node for managing joystick teleoperation inputs and converting them into velocity values.
  * @version 0.1
  * @date 2026-05-11
- * 
+ *
  * @copyright Copyright (c) 2026
- * 
+ *
  */
 #include "joystick_teleop.h"
 
@@ -17,7 +17,7 @@ JoystickTeleop::JoystickTeleop() : Node(JOYSTICK_TELEOP_NODE_NAME)
     leftJoystickAxis_ = this->declare_parameter<int>("left_joystick", 0);
     leftTriggerAxis_ = this->declare_parameter<int>("left_trigger", 2);
     rightTriggerAxis_ = this->declare_parameter<int>("right_trigger", 5);
-    
+
     cmdVelPub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 5);
 
     joySub_ = this->create_subscription<sensor_msgs::msg::Joy>("/joy", 5, [this](const sensor_msgs::msg::Joy::SharedPtr msg){
