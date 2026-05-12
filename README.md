@@ -1,116 +1,169 @@
 # stryderx_hardware
 
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble-blue)
-[![License](https://img.shields.io/badge/license-GNU%20GPL-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPLv3-blue.svg)](LICENSE)
 
-This is a ROS 2 robotics hardware package built with a strict Hardware Abstraction Layer (HAL). It wraps standalone C++/Python drivers into standardized ROS 2 nodes, making the robotics stack modular and easy to port across different platforms.
+`stryderx_hardware` is a standalone ROS 2 package for StryderX hardware-facing nodes. It wraps low-level hardware libraries and scripts behind ROS 2 executables for camera streaming, joystick teleoperation, drive throttle control, and steering control.
 
-Think of this package as the "glue" layer. It doesn't talk to the hardware directly; instead, it takes our independent drivers and plugs them into the ROS 2 ecosystem, handling their lifecycle and communication.
+## Package Contents
 
-## System Architecture
+| Path                          | Purpose                                                                    |
+| :---------------------------- | :------------------------------------------------------------------------- |
+| `src/camera_server.cpp`       | C++ camera node that publishes compressed images and luminosity data.      |
+| `src/joystick_teleop.cpp`     | C++ joystick teleop node that converts `/joy` input into `/cmd_vel`.       |
+| `scripts/drive_controller`    | Python node that maps `/cmd_vel` linear input to ESC servo commands.       |
+| `scripts/steering_controller` | Python node that maps `/cmd_vel` angular input to steering servo commands. |
+| `third_party/camera_driver`   | Camera driver submodule used by `camera_server`.                           |
+| `cmake/`                      | CMake helpers for executables, linting, and Doxygen docs.                  |
 
-I used a two-part system to keep our hardware logic separated from our middleware
+## Dependencies
 
-1. **Low-Level Drivers**: Pure C++/Python libraries with zero middleware dependencies.
-2. **High-Level Wrappers**: ROS 2 nodes that bridge the libraries into the ROS ecosystem.
+- ROS 2 Humble.
+- `ament_cmake` and `ament_cmake_python`.
+- `rclcpp` and `rclpy`.
+- `cv_bridge`, OpenCV 4, `sensor_msgs`, `geometry_msgs`, `std_msgs`, and `std_srvs`.
+- `doxygen` for optional API documentation.
+- `Rosmaster_Lib` available in the Python environment for drive and steering control.https://github.com/STRYDER-X
+- Robot hardware access when running hardware nodes:
+  - Camera device for `camera_server`.
+  - Rosmaster-compatible controller for the drive and steering nodes.
+  - Joystick input publisher such as `joy/joy_node` for `joystick_teleop`.
 
-## Key Features
+## Build
 
-At the moment the following features have been implemented.
+Place this package in the `src/` directory of a ROS 2 workspace. Because this package uses a camera driver submodule, initialize submodules after cloning:
 
-- **Camera Server**: Image streaming for US.
+```bash
+git submodule update --init --recursive
+```
 
-> [!NOTE]
-> This project is currently a **Work in Progress**.
+From the workspace root, build this package:
 
-## Getting Started
+```bash
+colcon build --packages-select stryderx_hardware --symlink-install
+source install/setup.bash
+```
 
-### Prerequisites
+## Executables
 
-- **ROS 2:** Humble (LTS).
-- **Tools**: `colcon`, `cmake`, and a C++17 compliant compiler.
-- **Doxygen**: Documentation for C++ code. ***(Optional)***
+Run nodes directly with `ros2 run` after building and sourcing the workspace.
 
-## Quick Start
+Camera server:
 
-You will need to build this package inside a standard ROS 2 workspace:
+```bash
+ros2 run stryderx_hardware camera_server
+```
 
-1. Head to your workspace and clone the repository:
+Joystick teleop:
 
-   ```bash
-   cd ~/<your_workspace>/src
-   ```
+```bash
+ros2 run stryderx_hardware joystick_teleop
+```
 
-   ```bash
-   git clone --recursive git@github.com:STRYDER-X/stryderx_hardware.git
-   ```
+Drive controller:
 
-2. Build the package
+```bash
+ros2 run stryderx_hardware drive_controller
+```
 
-   ```bash
-   cd .. && colcon build --packages-select stryderx_hardware --symlink-install
-   ```
+Steering controller:
 
-### Nodes and Interfaces
+```bash
+ros2 run stryderx_hardware steering_controller
+```
 
-#### `camera_server_node`
+For full robot startup, use this package together with a bringup package that launches the required nodes and parameters.
 
-Main node for handling visual data and environmental lighting.
+## Nodes And Interfaces
 
-> [!TIP]
-> Topics prefixed with `~` are private and will expand to include the node name (e.g.,
->  `/camera_server_node/camera/image/compressed`).
+### `camera_server`
 
-#### Publishers
-| Topic | Type | Description |
-| :--- | :--- | :--- |
-| `~/camera/image/compressed` | `sensor_msgs/msg/CompressedImage` | The JPEC compressed video stream. |
-| `~/luminosity_value` | `std_msgs/msg/Float32` | Current light levels for environmental awareness. |
+Publishes camera frames and luminosity readings from the configured camera device.
 
-#### Services
-| Service | Type | Description |
-| :--- | :--- | :--- |
-| `~/start_streaming` | `std_srvs/srv/Trigger` | Connects to the hardware and kicks off the stream. Also used to resume streaming. |
-| `~/pause_streaming` | `std_srvs/srv/Trigger` | Pauses the stream. |
-| `~/shutdown_server` | `std_srvs/srv/Trigger` | Safely releases the hardware and stops the node. |
+Topics and services prefixed with `~` are private names and expand under the node name. For example, `~/camera/image/compressed` becomes `/camera_server/camera/image/compressed`.
+
+| Publisher                   | Type                              | Description                                        |
+| :-------------------------- | :-------------------------------- | :------------------------------------------------- |
+| `~/camera/image/compressed` | `sensor_msgs/msg/CompressedImage` | JPEG-compressed camera stream.                     |
+| `~/luminosity_value`        | `std_msgs/msg/Float32`            | Luminosity value extracted from the current frame. |
+
+| Service             | Type                   | Description                               |
+| :------------------ | :--------------------- | :---------------------------------------- |
+| `~/start_streaming` | `std_srvs/srv/Trigger` | Starts or resumes camera streaming.       |
+| `~/pause_streaming` | `std_srvs/srv/Trigger` | Pauses camera streaming.                  |
+| `~/shutdown_server` | `std_srvs/srv/Trigger` | Stops the server and shuts down the node. |
+
+| Parameter         | Default      | Description                                        |
+| :---------------- | :----------- | :------------------------------------------------- |
+| `camera_name`     | `USB CAMERA` | Descriptive camera name.                           |
+| `camera_type`     | `USB`        | Camera type label.                                 |
+| `device_index`    | `0`          | Camera device index.                               |
+| `fps`             | `30`         | Target camera frames per second.                   |
+| `timeout_seconds` | `5`          | Consecutive frame failure timeout before shutdown. |
+
+### `joystick_teleop`
+
+Subscribes to joystick messages and publishes normalized velocity commands.
+
+| Interface  | Type                      | Description                  |
+| :--------- | :------------------------ | :--------------------------- |
+| `/joy`     | `sensor_msgs/msg/Joy`     | Joystick input subscription. |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` | Velocity command publisher.  |
+
+| Parameter       | Default | Description                           |
+| :-------------- | :------ | :------------------------------------ |
+| `left_joystick` | `0`     | Axis used for steering input.         |
+| `left_trigger`  | `2`     | Axis used for reverse throttle input. |
+| `right_trigger` | `5`     | Axis used for forward throttle input. |
+
+### `drive_controller`
+
+Subscribes to `/cmd_vel` and maps `linear.x` to ESC servo commands on servo ID `2`.
+
+| Interface  | Type                      | Description                    |
+| :--------- | :------------------------ | :----------------------------- |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` | Velocity command subscription. |
+
+| Parameter           | Default | Description                                |
+| :------------------ | :------ | :----------------------------------------- |
+| `esc_min_angle`     | `80`    | ESC angle for one throttle limit.          |
+| `esc_neutral_angle` | `90`    | ESC neutral angle used during cleanup.     |
+| `esc_max_angle`     | `100`   | ESC angle for the opposite throttle limit. |
+| `clamp_esc_angle`   | `true`  | Declared clamp setting for ESC output.     |
+
+### `steering_controller`
+
+Subscribes to `/cmd_vel` and maps `angular.z` to steering servo commands on servo ID `1`.
+
+| Interface  | Type                      | Description                    |
+| :--------- | :------------------------ | :----------------------------- |
+| `/cmd_vel` | `geometry_msgs/msg/Twist` | Velocity command subscription. |
+
+| Parameter   | Default | Description                                          |
+| :---------- | :------ | :--------------------------------------------------- |
+| `min_angle` | `40`    | Steering angle for one angular input limit.          |
+| `max_angle` | `100`   | Steering angle for the opposite angular input limit. |
 
 ## Documentation
 
-I used **Doxygen** to genearte API reference for the C++ codebase. Since I use a CMake-based documentation flow, you should generate the docs through the build system rather than running Doxygen manually
-
-To generate the documentation:
+Generate Doxygen documentation through the CMake target:
 
 ```bash
-# Build the specific `docs` target
-coclon build --packages-select stryderx_hardware --cmake-target docs
+colcon build --packages-select stryderx_hardware --cmake-target docs
 ```
 
-Once the build finishes, your documentation will be available in the `build/stryderx_hardware/docs/html/` directory. Open `index.html` in your browswer to view it.
+The generated HTML output is written to `build/stryderx_hardware/docs/html/` in the workspace.
 
-## Contributing
+## Development Checks
 
-Contribution are welcomed! To keep the code base somewhat clean and compatible across different ROS versions, please adhere to the following guidelines.
+Run package tests and lint checks from the workspace root:
 
-### Git & Branching Strategy
+```bash
+colcon test --packages-select stryderx_hardware
+colcon test-result --verbose
+```
 
-To keep things organized and ensure long-term compatabilitiy, I used **Distro Silos** for ROS 2 versions
-(like hunble, jazzy, iron). This helps isolate changes for specific ROS 2 distributions.
+## Maintainer
 
-### Branch Naming Convention:
-
-Branches are named with the following convention: `type/distro/description-issue#`
-
-- **Types**: `feat/`, `fix`, `refactor`, `doc`, `test`.
-- **Example**: `feat/humble/camera-server-logic-102`.
-
-### Quality Control
-
-- **Workspace Protection**: Automated via `pre-commit` hooks.
-- **Drivers First**: Any new hardware features should be added to underlying agnostic library before
-wrapping them here.
-- **Linting**: I used `uncrustify` for C++ formatting. Run `ament_uncrustify` before opening a pull request.
-
-## Author & Maintainer
-
-- **Julian A. Rendon**
-- Email: julianrendon514@gmail.com
+- Julian A. Rendon
+- julianrendon514@gmail.com
