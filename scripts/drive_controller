@@ -10,7 +10,7 @@ def map_range(value: float, in_min: float, in_max: float, out_min: float, out_ma
     """
     Maps a value from an input range to an output range with clamping.
     """
-    # Prevent division by zero if input range is zero. In this case, return the midpoint of the output range.
+    # Prevent division by zero. In this case, return the midpoint of the output range.
     if in_min == in_max:
         return float(out_max - out_min)
 
