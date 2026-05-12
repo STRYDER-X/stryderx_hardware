@@ -259,7 +259,7 @@ void CameraServer::HandleShutdownRequest(
 /**
  * @brief Entry point for the Camera Server Node.
  * Initializes the ROS 2 communications, instantiates the CameraServer
- * with parameter-driven camera settings, and begins the execution loop.
+ * and begins the execution loop.
  * @param argc The number of command-line arguments.
  * @param argv The array of command-line arguments.
  * @return int Execution status (0 for success).

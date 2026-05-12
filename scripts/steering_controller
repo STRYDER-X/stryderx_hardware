@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""ROS 2 steering controller node for StryderX servo control."""
+
 import rclpy
 from geometry_msgs.msg import Twist
 from rclpy.node import Node
@@ -8,7 +10,14 @@ from Rosmaster_Lib.Rosmaster_Lib import Rosmaster
 
 def map_range(value: float, in_min: float, in_max: float, out_min: float, out_max: float) -> float:
     """
-    Maps a values [in_min, in_max] to [out-min, out_max] with clamping.
+    @brief Map a value from one range to another with output clamping.
+
+    @param value Input value to map.
+    @param in_min Lower bound of the input range.
+    @param in_max Upper bound of the input range.
+    @param out_min Lower bound of the output range.
+    @param out_max Upper bound of the output range.
+    @return Mapped value clamped to the output range.
     """
     # Prevent division by zero. In this case, return the midpoint of the output range.
     if in_min == in_max:
@@ -27,7 +36,9 @@ class SteeringController(Node):
     """ROS 2 node that calculates and sets steering angle."""
 
     def __init__(self) -> None:
+        """Initialize the steering controller node, parameters, and subscriber."""
         super().__init__("steering_controller")
+        ## Rosmaster hardware interface used to command the steering servo.
         self.robot_: Rosmaster = Rosmaster(car_type=4)
 
         self.declare_parameters(
@@ -38,17 +49,19 @@ class SteeringController(Node):
             ],
         )
 
+        ## Minimum configured steering servo angle.
         self.min_angle_: int = self.get_parameter("min_angle").value
+        ## Maximum configured steering servo angle.
         self.max_angle_: int = self.get_parameter("max_angle").value
 
+        ## Subscription for velocity commands produced by joystick teleop.
         self.cmd_vel_sub_ = self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_cb, 5)
 
     def cmd_vel_cb(self, msg: Twist) -> None:
         """
-        Convert angular velocity input into a steering servo angle.
+        @brief Convert angular velocity input into a steering servo angle.
 
-        Args:
-            msg: Command velocity message.
+        @param msg Command velocity message.
         """
         steering_angle: float = map_range(
             msg.angular.z, -1.0, 1.0, self.max_angle_, self.min_angle_
@@ -59,6 +72,11 @@ class SteeringController(Node):
 
 
 def main(args=None) -> None:
+    """
+    @brief Initialize ROS 2 and spin the steering controller.
+
+    @param args Optional ROS 2 command-line arguments.
+    """
     rclpy.init(args=args)
     node = SteeringController()
     try:

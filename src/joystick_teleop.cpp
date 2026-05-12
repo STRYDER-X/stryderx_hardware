@@ -52,7 +52,14 @@ void JoystickTeleop::JoyCB(const sensor_msgs::msg::Joy::SharedPtr msg)
 }
 } // namespace stryderx
 
-
+/**
+ * @brief Entry point for the Joystick Teleop Node.
+ * Initializes the ROS 2 communications, instantiates the JoystickTeleop
+ * and begins the execution loop.
+ * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments.
+ * @return int Execution status (0 for success).
+ */
 int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
