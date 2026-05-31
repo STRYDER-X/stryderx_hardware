@@ -1,3 +1,4 @@
 [submodule "third_party/camera_driver"]
 	path = third_party/camera_driver
-	url = git@github.com:jrendon102/camera_driver.git
+	url = https://github.com/jrendon102/camera_driver.git
+	branch = master
